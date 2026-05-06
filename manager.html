@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Edge 书签管理</title>
+    <style>
+        :root {
+            --bg: #f6f8fb;
+            --panel: #ffffff;
+            --line: #e2e6ea;
+            --text: #1f2933;
+            --muted: #6b7280;
+            --accent: #0f6cbd;
+            --danger: #c50f1f;
+            --sidebar-width: 300px;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+        }
+
+        #toolbar {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 16px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .brand {
+            font-size: 16px;
+            font-weight: 700;
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+
+        .btn {
+            height: 32px;
+            padding: 0 12px;
+            border: 1px solid #c7ced6;
+            border-radius: 6px;
+            background: #fff;
+            color: #202b37;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn:hover { background: #f3f6f9; }
+        .btn-primary { color: #fff; background: var(--accent); border-color: var(--accent); }
+        .btn-primary:hover { background: #115ea3; }
+        .btn-danger { color: #fff; background: var(--danger); border-color: var(--danger); }
+        .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+        #search {
+            width: min(360px, 28vw);
+            height: 32px;
+            padding: 0 10px;
+            border: 1px solid #c7ced6;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        #select-tools {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding-left: 12px;
+            border-left: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        #status {
+            color: var(--muted);
+            font-size: 12px;
+            margin-left: 4px;
+            white-space: nowrap;
+        }
+
+        #container {
+            display: flex;
+            height: calc(100vh - 56px);
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            overflow-y: auto;
+            background: #fbfcfd;
+            border-right: 1px solid var(--line);
+            padding: 10px 0;
+        }
+
+        #main-view {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--panel);
+        }
+
+        .tree-item { display: flex; flex-direction: column; }
+        .tree-header {
+            display: flex;
+            align-items: center;
+            min-height: 32px;
+            padding: 5px 8px;
+            cursor: pointer;
+            user-select: none;
+            color: #263442;
+            border-left: 3px solid transparent;
+        }
+        .tree-header:hover { background: #eef4fb; }
+        .tree-header.active {
+            background: #e5f1fb;
+            border-left-color: var(--accent);
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .tree-header.drag-over {
+            background: #d6eaff;
+            outline: 1px dashed var(--accent);
+            outline-offset: -2px;
+        }
+        .tree-toggle {
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 2px;
+            border-radius: 4px;
+            color: var(--muted);
+            font-size: 11px;
+        }
+        .tree-toggle.invisible { visibility: hidden; }
+        .tree-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 13px;
+        }
+        .tree-count {
+            color: var(--muted);
+            font-size: 11px;
+            margin-left: 6px;
+        }
+        .tree-actions {
+            display: none;
+            gap: 2px;
+            margin-left: 4px;
+        }
+        .tree-header:hover .tree-actions { display: flex; }
+        .icon-btn {
+            width: 26px;
+            height: 26px;
+            border: none;
+            border-radius: 5px;
+            background: transparent;
+            color: #617080;
+            cursor: pointer;
+        }
+        .icon-btn:hover { background: #dde8f2; color: #162330; }
+        .tree-children { display: none; padding-left: 18px; }
+        .tree-children.open { display: block; }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            min-height: 48px;
+            padding: 0 14px;
+            border-bottom: 1px solid #edf0f3;
+            background: #fff;
+            user-select: none;
+        }
+        .list-item:hover { background: #f8fafc; }
+        .list-item.selected { background: #e5f1fb; }
+        .list-item.dragging { opacity: .5; }
+        .list-item.drop-into {
+            background: #dff0ff;
+            outline: 2px dashed var(--accent);
+            outline-offset: -2px;
+        }
+        .list-checkbox { width: 16px; height: 16px; margin-right: 10px; cursor: pointer; }
+        .item-icon { width: 20px; height: 20px; margin-right: 12px; object-fit: contain; flex-shrink: 0; }
+        .item-content {
+            flex: 1;
+            min-width: 0;
+            cursor: pointer;
+            padding: 5px 0;
+        }
+        .item-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 14px;
+        }
+        .item-url {
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--muted);
+            font-size: 11px;
+        }
+        .list-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity .12s;
+        }
+        .list-item:hover .list-actions { opacity: 1; }
+        .list-item.result-item .list-actions { opacity: 1; }
+        .empty-state {
+            padding: 48px;
+            color: var(--muted);
+            text-align: center;
+        }
+        .hint {
+            padding: 8px 14px;
+            color: var(--muted);
+            font-size: 12px;
+            background: #f8fafc;
+            border-bottom: 1px solid #edf0f3;
+        }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <div class="brand">书签管理</div>
+        <button id="btn-save" class="btn btn-primary" disabled>同步排序</button>
+        <button id="btn-undo" class="btn" disabled>撤销</button>
+        <button id="btn-refresh" class="btn">刷新</button>
+        <input id="search" type="search" placeholder="搜索标题、网址或域名">
+        <button id="btn-duplicates" class="btn">重复书签</button>
+        <button id="btn-empty-folders" class="btn">空文件夹</button>
+        <div id="select-tools">
+            <input type="checkbox" id="cb-select-all" title="全选/取消全选">
+            <span id="select-count">0 已选</span>
+            <button id="btn-delete-selected" class="btn btn-danger" disabled>删除所选</button>
+        </div>
+        <span id="status"></span>
+        <div style="flex:1"></div>
+        <button id="btn-expand-all" class="btn">全部展开</button>
+        <button id="btn-new-folder" class="btn">新建文件夹</button>
+    </div>
+
+    <div id="container">
+        <div id="sidebar"></div>
+        <div id="main-view"></div>
+    </div>
+
+    <script src="manager.js"></script>
+</body>
+</html>

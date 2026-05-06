@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Edge 书签管理",
+  "version": "5.1",
+  "description": "轻量书签整理：拖拽排序、多选移动、搜索、重复检测、空文件夹检测和撤销。",
+  "permissions": [
+    "bookmarks",
+    "favicon"
+  ],
+  "action": {
+    "default_title": "打开书签管理器"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
